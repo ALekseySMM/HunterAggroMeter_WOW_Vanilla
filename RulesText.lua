@@ -7,7 +7,7 @@
 ]]
 
 HunterAggroMeterRulesText = [[
-Hunter Aggro Meter - Rules
+Hunter Aggro Meter v.1.23 - Rules
 
 1. This meter estimates threat by comparing your damage to your pet's damage on the current target. It is an approximation, not real threat data.
 
@@ -26,3 +26,5 @@ Hunter Aggro Meter - Rules
 
 5. Left-click the "H" button to open/close the meter window. Hold Control and drag it to move it; Control + right-click resets its position.
 ]]
+
+	All tests and settings began on the private WOT server “Turtle”. They continued on the Raven server from https://ravencraft.io/
