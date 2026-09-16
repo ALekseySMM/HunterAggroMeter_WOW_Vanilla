@@ -8,6 +8,7 @@ A small WoW addon for Hunters who solo-farm with their pet tanking. It shows how
 
 *Before combat — the window sits idle (empty bars, "Tank: --").*:
 ![Before combat](screenshots/ScreenShot_142_1.png)
+
 ...
 
 ![Target selected](screenshots/ScreenShot_143_2.png)
