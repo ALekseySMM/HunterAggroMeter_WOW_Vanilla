@@ -61,10 +61,9 @@
 
 1. Скачай этот репозиторий как ZIP (зелёная кнопка "Code" → "Download ZIP"), либо возьми последний ZIP со страницы [Releases](../../releases), если она есть.
 2. Распакуй так, чтобы в итоге получилась папка `HunterAggroMeter` прямо внутри твоей папки `Interface\AddOns\`:
-3. 
-World of Warcraft\Interface\AddOns\HunterAggroMeter\HunterAggroMeter.toc
-World of Warcraft\Interface\AddOns\HunterAggroMeter\HunterAggroMeter.lua
-...
+    World of Warcraft\Interface\AddOns\HunterAggroMeter\HunterAggroMeter.toc
+    World of Warcraft\Interface\AddOns\HunterAggroMeter\HunterAggroMeter.lua
+    ...
 
 3. Перезапусти игру (или `/reload`) и убедись, что аддон включён в списке AddOns на экране выбора персонажа.
 
