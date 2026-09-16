@@ -21,3 +21,6 @@ NOTE: This file is not read by the game directly (WoW addons cannot read
 arbitrary files from disk). The in-game window shows the copy of this
 text stored in RulesText.lua. If you edit this .txt file, copy the same
 change into RulesText.lua so the in-game window matches.
+
+ps
+All tests and settings began on the private-server WOW Classic “Turtle”. They continued on the "Raven" server from https://ravencraft.io/
