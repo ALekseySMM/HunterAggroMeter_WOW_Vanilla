@@ -22,11 +22,14 @@ A small WoW addon for Hunters who solo-farm with their pet tanking. It shows how
 
 
 *Aggro keeps climbing.*:
+
 ![Aggro climbing](screenshots/ScreenShot_146_5.png)
 
 *Aggro has entered the yellow zone — it will turn red next, and the mob will pull off the pet.*:
+
 ![Yellow zone](screenshots/ScreenShot_147_6.png)
 .
+
 ...
 ![H button menu and close button](screenshots/ScreenShot_148_8.png)
 
