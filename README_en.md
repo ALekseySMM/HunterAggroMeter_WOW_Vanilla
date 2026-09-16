@@ -13,9 +13,11 @@ A small WoW addon for Hunters who solo-farm with their pet tanking. It shows how
 ![Target selected](screenshots/ScreenShot_143_2.png)
 
 *The moment of the first shot — the arrow is still in flight.*:
+
 ![First shot in flight](screenshots/ScreenShot_144_3.png)
 
 *The shot lands and the Hunter's aggro starts building.*:
+
 ![Aggro starts building](screenshots/ScreenShot_145_4.png)
 
 
