@@ -27,4 +27,4 @@ Hunter Aggro Meter v.1.23 - Rules
 5. Left-click the "H" button to open/close the meter window. Hold Control and drag it to move it; Control + right-click resets its position.
 ]]
 
-	All tests and settings began on the private WOT server “Turtle”. They continued on the Raven server from https://ravencraft.io/
+	All tests and settings began on the private-server WOW Classic “Turtle”. They continued on the "Raven" server from https://ravencraft.io/
