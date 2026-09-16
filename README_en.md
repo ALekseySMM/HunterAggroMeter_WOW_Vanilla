@@ -9,28 +9,23 @@ A small WoW addon for Hunters who solo-farm with their pet tanking. It shows how
 *Before combat — the window sits idle (empty bars, "Tank: --").*:
 ![Before combat](screenshots/ScreenShot_142_1.png)
 
-...
-
+*Target selected, pet ready to engage. (Important: the pet attacks first, not you.)*:
 ![Target selected](screenshots/ScreenShot_143_2.png)
 
-*Target selected, pet ready to engage. (Important: the pet attacks first, not you.)*
-
+*The moment of the first shot — the arrow is still in flight.*:
 ![First shot in flight](screenshots/ScreenShot_144_3.png)
 
-*The moment of the first shot — the arrow is still in flight.*
-
+*The shot lands and the Hunter's aggro starts building.*:
 ![Aggro starts building](screenshots/ScreenShot_145_4.png)
 
-*The shot lands and the Hunter's aggro starts building.*
 
+*Aggro keeps climbing.*:
 ![Aggro climbing](screenshots/ScreenShot_146_5.png)
 
-*Aggro keeps climbing.*
-
+*Aggro has entered the yellow zone — it will turn red next, and the mob will pull off the pet.*:
 ![Yellow zone](screenshots/ScreenShot_147_6.png)
-
-*Aggro has entered the yellow zone — it will turn red next, and the mob will pull off the pet.*
-
+.
+...
 ![H button menu and close button](screenshots/ScreenShot_148_8.png)
 
 *The "H" button opens a small menu of options; left-clicking it also shows/hides the addon window directly. The window can also be closed the standard way, with the "X" button.*
