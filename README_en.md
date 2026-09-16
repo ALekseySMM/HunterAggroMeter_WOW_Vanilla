@@ -33,9 +33,11 @@ A small WoW addon for Hunters who solo-farm with their pet tanking. It shows how
 ...
 ![H button menu and close button](screenshots/ScreenShot_148_8.png)
 
-*1. The "H" button opens a small menu of options; 
-2. left-clicking it also shows/hides the addon window directly. 
-3. The window can also be closed the standard way, with the "X" button.*
+The "H" button:
+
+1. Opens a small menu of options.
+2. Left-clicking it also shows/hides the addon window directly.
+3. The window can also be closed the standard way, with the "X" button.
 
 ## Who this is for
 
