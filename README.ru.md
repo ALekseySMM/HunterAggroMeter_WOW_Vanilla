@@ -1,4 +1,4 @@
-# Hunter Aggro Meter (Solo MODE)
+# Hunter Aggro Meter (Solo MODE) version 1.23
 
 *[Read this in English](README_en.md)*
 
