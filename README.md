@@ -1,4 +1,4 @@
-Solo-play aggro meter for Hunters on vanilla-style WoW servers — helps track when you're about to pull aggro off your pet.
+Solo-play aggro meter for Hunters on Vanilla-style WoW servers — helps track when you're about to pull aggro off your pet.
 
 The HunterAggroMeter addon is designed to make solo Hunter gameplay easier, specifically for keeping track of when aggro is about to pull off the pet.
 
