@@ -1,4 +1,4 @@
-# Hunter Aggro Meter (Solo)
+# Hunter Aggro Meter (Solo Mode)
 
 *[Читать на русском](README.ru.md)*
 
