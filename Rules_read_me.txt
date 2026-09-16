@@ -1,4 +1,4 @@
-Hunter Aggro Meter - Rules
+Hunter Aggro Meter v.1.23 - Rules
 
 1. This meter estimates threat by comparing your damage to your pet's damage on the current target. It is an approximation, not real threat data.
 
