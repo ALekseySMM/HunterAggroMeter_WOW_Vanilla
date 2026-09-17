@@ -1,0 +1,228 @@
+Hunter Aggro Meter - Changelog
+===============================
+
+The addon was originally written against the official, modern Classic Era
+API. It turned out that the actual server runs on an engine equivalent to
+WoW Classic vanilla 1.12, so almost every following version fixed another
+mismatch between "how it's supposed to work per the documentation" and
+"how it actually behaves on this server."
+
+Full timeline below.
+
+
+Version 1.00 - Initial version
+-------------------------------
+- Basic addon: one bar for player threat and one bar for pet threat.
+- Threat calculated via UnitDetailedThreatSituation (real threat API).
+
+
+Version 1.01 - Redesigned visuals (per request)
+-------------------------------------------------
+- Redesigned as a single large bar: "your aggro relative to your pet"
+  (0% to 100%+), with a white threshold marker at the 100% mark.
+- Small blue pet bar underneath, shown for reference.
+- Status line showing "who currently holds aggro."
+
+
+Version 1.02 - Fixed load-time crash (BackdropTemplate)
+-----------------------------------------------------------
+- CreateFrame with the BackdropTemplate template returned nil on this
+  client.
+- Removed the template dependency; the window background is now a plain
+  colored texture instead.
+
+
+Version 1.03 - Fixed SetSize / SetColorTexture
+---------------------------------------------------
+- Root cause found: the client runs on a Lua 5.0-level engine (true
+  vanilla), which lacks these convenience shorthands.
+- SetSize -> SetWidth + SetHeight.
+- SetColorTexture -> SetTexture with color arguments.
+
+
+Version 1.04 - Guard for a fully missing threat API
+---------------------------------------------------------
+- Added a check: if UnitDetailedThreatSituation doesn't exist as a
+  function at all, the addon no longer errors out - it shows a clear
+  "not supported" message instead.
+
+
+Version 1.05 - Fixed SetPoint/unpack
+----------------------------------------
+- Storing the window position as a table with a "hole" (a nil in the
+  middle) broke unpack() on this client.
+- Window position storage switched to separate named fields in
+  SavedVariables.
+
+
+Version 1.06 - Fixed self/this, event/arg1
+------------------------------------------------
+- On this client, script handlers do not receive self, event, or
+  elapsed as function parameters - only through the old-style global
+  variables this, event, and arg1.
+- Rewrote the window-drag, event, and update-timer handlers to be
+  defensive (selfArg or this, evArg or event, etc.).
+
+
+Version 1.07 - First attempt at an approximate mode
+---------------------------------------------------------
+- Confirmed: there is no real threat function on this server at all.
+- Added an "approximate" mode: compares player damage to pet damage via
+  COMBAT_LOG_EVENT_UNFILTERED.
+
+
+Version 1.08 - Corrected the pull threshold
+--------------------------------------------------
+- Raised the aggro-pull threshold from 100% to 130%, to account for the
+  real in-game "buffer" rule for ranged attacks (a Hunter's shots are
+  ranged).
+
+
+Version 1.09 - Correct combat log for vanilla WoW
+--------------------------------------------------------
+- Turned out COMBAT_LOG_EVENT_UNFILTERED was only added in 2008 and
+  does not exist on true 1.12.
+- Switched to the old text-based chat events (CHAT_MSG_COMBAT_SELF_HITS,
+  CHAT_MSG_SPELL_SELF_DAMAGE, CHAT_MSG_COMBAT_PET_HITS, etc.), parsing
+  the message text directly.
+
+
+Version 1.10 - Fixed UnitGUID
+-----------------------------------
+- This function doesn't exist on the client either.
+- Source/target tracking for damage switched from GUID-based matching
+  to unit-name matching.
+
+
+Version 1.11 - Fixed the "..." syntax error
+--------------------------------------------------
+- The "..." vararg construct is a Lua 5.1 feature; on Lua 5.0 it caused
+  a compile-time error ("unexpected symbol").
+- Removed entirely, replaced with named parameters plus arg1..argN.
+
+
+Version 1.12 - Fixed string:match()
+-----------------------------------------
+- Strings in this environment do not support colon method calls
+  (msg:match(...)) - the required metatable isn't set up.
+- All such calls replaced with the functional-style string.find(...).
+
+
+Version 1.13 - Manual threshold configuration
+-----------------------------------------------------
+- Added the /ham t <number> command to set the aggro threshold
+  manually.
+- The value is saved to SavedVariables and used as the default on the
+  next login.
+
+
+Version 1.14 - Translated to English
+--------------------------------------------
+- Cyrillic text wasn't rendering (the client's font doesn't support it -
+  it displayed empty boxes instead).
+- All in-game visible text (bars, status line, chat messages) translated
+  to English.
+
+
+Version 1.15 - Tighter layout
+-------------------------------------
+- Removed excess spacing between the title, bars, and status line;
+  reduced overall window height.
+
+
+Version 1.16 - Persistent launcher button + close button
+----------------------------------------------------------------
+- Added a window-toggle button that stays visible even when the main
+  window is closed.
+- Added a close (X) button in the window's top-right corner.
+
+
+Version 1.17 - Fixed the invisible launcher button
+---------------------------------------------------------
+- The button wasn't rendering - most likely the Interface\Icons\...
+  icon texture failed to load on this client.
+- Rebuilt the button as a reliable colored square with the letter "H",
+  and moved it to the top-right corner of the screen.
+- Added the /ham show and /ham hide commands.
+
+
+Version 1.18 - Fixed the button not being movable
+--------------------------------------------------------
+- The button couldn't be dragged - a missing SetMovable(true) call.
+- Added a round gold border texture (matching the minimap-button style)
+  layered over the reliable colored square.
+
+
+Version 1.19 - Fixed settings not persisting
+-----------------------------------------------------
+- The aggro threshold (and other settings) weren't being saved between
+  sessions.
+- Root cause: on this client, SavedVariables load after the addon's
+  script has already run once.
+- Added re-application of saved settings on the ADDON_LOADED and
+  PLAYER_ENTERING_WORLD events to work around the load-order issue.
+
+
+Version 1.20 - Default launcher button position
+---------------------------------------------------------
+- Moved the button's default position to the center of the screen (per
+  request, since it wasn't visible in the corner).
+- Added a forced migration of the saved position for existing settings.
+
+
+Version 1.21 - Pet healing threat, Rules window
+--------------------------------------------------------
+- Healing counts as threat: Mend Pet now adds 50% of the amount healed
+  to the player's aggro.
+- Added a "Rules - read me!" window, with its text sourced from a
+  separate file, RulesText.lua.
+- Added a trigger button (temporary, later removed) and the /ham doc
+  command.
+
+
+Version 1.22 - Button and scrollbar revisions
+------------------------------------------------------
+- Removed the separate Rules button; replaced it with a 4th line in the
+  "H" button's tooltip pointing to /ham doc.
+- Rebuilt both close buttons (main window and Rules window) using the
+  same reliable style as the "H" button (square + border), since the
+  standard Blizzard close-button textures weren't rendering.
+- Added a scrollbar to the Rules window (a manually built ScrollFrame +
+  Slider, with no XML template dependency).
+
+
+Version 1.23 - Feign Death mechanic
+-------------------------------------------
+- On activating Feign Death: the current aggro % is remembered, the bar
+  immediately drops to 0, and a 10-second on-screen countdown starts
+  (displayed below the character).
+- While feigning or simply standing without acting, aggro stays at
+  zero.
+- The first action taken (a shot, a cast, or a heal) after Feign Death
+  restores aggro using this formula:
+  - within the first 5 seconds (countdown 10 to 6):
+    remembered_aggro / 3 + threat from that action;
+  - after 5 seconds (countdown 5 to 0):
+    remembered_aggro / 10 + threat from that action.
+
+Version 1.24 - Close button restyle + fix aggro not clearing on death
+------------------------------------------------------------------------
+- Close buttons (main window and Rules window): removed the yellow
+  border highlight, replaced it with a neutral gray frame; the "X"
+  itself is red and a bit bigger. A plain red cross in a frame, as
+  before, instead of the yellow-highlighted square.
+- Fixed: aggro % stayed stuck at whatever it was when the player died
+  (e.g. after Feign Death on a mob you can't outrun), instead of
+  dropping to 0 - the meter now checks UnitIsDeadOrGhost("player") and
+  resets to zero immediately once the player is dead, in both the
+  precise and approximate modes.
+
+----------------------------------------
+
+Summary: almost every version after 1.01 isn't a new feature so much as
+the discovery of another modern WoW API function that doesn't actually
+exist on this server (an engine at the WoW Classic vanilla 1.12 level,
+despite showing a different version number in-game), followed by
+replacing it with an older/more primitive equivalent or a custom
+workaround (estimating threat via the combat log instead of a real
+threat API).
