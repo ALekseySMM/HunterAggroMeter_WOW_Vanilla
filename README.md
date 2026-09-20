@@ -6,7 +6,7 @@ Tested from level 20 to level 33. Threshold settings used during testing:
 
     Level 20: /ham t 190
     Level 27+: /ham t 210
-    Level 30+: /ham t 230
+    Level 30-40: /ham t 230
 
 It's not yet clear how this will need to change at higher levels — the underlying logic may need a more fundamental rework further on.
 
