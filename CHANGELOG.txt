@@ -285,6 +285,27 @@ Version 1.29 - Mend Pet threat: drop the buff requirement, 1:1 coefficient
   (HEAL_THREAT_MULTIPLIER), applies to both the HP-tracking path above
   and the old chat-text path.
 
+Version 1.30 - Fixed spurious full resets (Disengage / Esc / target blips)
+------------------------------------------------------------------------
+- Root cause found for two related reports: "Disengage only reduces
+  aggro the first time" and "pressing Esc drops aggro to zero and it
+  regrows from scratch". Both came from the same bug: any momentary
+  loss of the tracked mob (e.g. losing your own target via Esc while
+  the pet keeps fighting, or a brief blip right after Disengage) was
+  wiping the damage/heal counters completely to zero, since the meter
+  treated "no target right now" the same as "the fight is over."
+- Real resets now only happen when the tracked mob actually changes,
+  or when combat truly ends (PLAYER_REGEN_ENABLED). A momentary loss
+  of target no longer touches the counters - the ratio just keeps
+  evolving naturally (e.g. it can drift down over time if the pet
+  keeps dealing damage while the player doesn't, which is expected).
+- PLAYER_TARGET_CHANGED no longer force-resets tracking on its own -
+  only an actual different mob name does, exactly as it already did
+  every tick in UpdateApproxMeter.
+- Disengage's aggro reduction is no longer gated on "playerDamage > 0"
+  (that gate was itself getting tripped by the same false-reset bug) -
+  it now always applies and always prints a confirmation.
+
 ----------------------------------------
 
 Summary: almost every version after 1.01 isn't a new feature so much as

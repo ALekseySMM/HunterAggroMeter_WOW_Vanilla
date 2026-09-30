@@ -35,7 +35,7 @@ local ADDON_NAME = "HunterAggroMeter"
 -- оба значения при каждом релизе. GetAddOnMetadata на этом клиенте
 -- ненадёжен, поэтому номер версии просто продублирован тут как
 -- константа для отображения в окне.
-local ADDON_VERSION = "1.29"
+local ADDON_VERSION = "1.30"
 
 HunterAggroMeterDB = HunterAggroMeterDB or {
 	point = "CENTER",
@@ -894,18 +894,38 @@ local function CheckPetHealTick(dt)
 end
 
 local function UpdateApproxMeter()
-	local trackedUnit = GetTrackedUnit()
-	if IsPlayerDead() or not trackedUnit then
+	if IsPlayerDead() then
 		ResetMeter()
 		trackedTargetName = nil
 		StopFeignDeath()
 		return
 	end
 
-	local curName = UnitName(trackedUnit)
-	if curName ~= trackedTargetName then
-		ResetDamageTracking(trackedUnit)
+	-- ВАЖНО: trackedUnit ("на кого реально идёт бой") может на миг
+	-- пропасть без того, чтобы бой на самом деле закончился — например,
+	-- отскок от Disengage или снятие цели через Esc может на один тик
+	-- убрать и target, и pettarget, хотя моб как дрался с петом, так и
+	-- дерётся. Раньше это полностью обнуляло playerDamage/petDamage —
+	-- отсюда и "агро падает в ноль и растёт с нуля" на пустом месте,
+	-- и то, почему повторный Disengage переставал что-либо снижать
+	-- (снижать было уже нечего, всё обнулилось само). Теперь настоящий
+	-- сброс происходит только при смене моба (ниже) или при выходе из
+	-- боя (PLAYER_REGEN_ENABLED) — кратковременная потеря цели просто
+	-- ничего не трогает, счётчики продолжают жить как есть.
+	local trackedUnit = GetTrackedUnit()
+
+	if trackedUnit then
+		local curName = UnitName(trackedUnit)
+		if curName ~= trackedTargetName then
+			ResetDamageTracking(trackedUnit)
+			StopFeignDeath()
+		end
+	elseif not trackedTargetName then
+		-- Ни текущей цели, ни запомненного боя — реально нечего
+		-- показывать.
+		ResetMeter()
 		StopFeignDeath()
+		return
 	end
 
 	local hasPet = UnitExists("pet")
@@ -1045,15 +1065,30 @@ events:SetScript("OnEvent", function(selfArg, evArg, msgArg, unitArg)
 	end
 
 	if ev == "PLAYER_TARGET_CHANGED" then
-		if not hasThreatAPI then
-			ResetDamageTracking(GetTrackedUnit())
-		end
+		-- Не форсируем сброс тут: UpdateMeter/UpdateApproxMeter сами
+		-- решают, сменился ли реально отслеживаемый моб (по имени), а
+		-- не просто "игрок снял/сменил СВОЮ цель" — иначе, например,
+		-- снятие цели через Esc, пока пет продолжает драться с тем же
+		-- мобом, обнуляло бы накопленный агро без причины.
 		UpdateMeter()
 		return
 	end
 
 	if ev == "UNIT_PET" then
 		ResetPetHealthTracking()
+		UpdateMeter()
+		return
+	end
+
+	if ev == "PLAYER_REGEN_ENABLED" then
+		-- Настоящий конец боя (вышли из combat lockdown) — вот тут уже
+		-- по-честному обнуляем счётчики, а не на каждой мимолётной
+		-- потере цели.
+		if not hasThreatAPI then
+			ResetDamageTracking(nil)
+			StopFeignDeath()
+			ResetPetHealthTracking()
+		end
 		UpdateMeter()
 		return
 	end
@@ -1080,7 +1115,13 @@ events:SetScript("OnEvent", function(selfArg, evArg, msgArg, unitArg)
 	if ev == "UNIT_SPELLCAST_SUCCEEDED" then
 		local castUnit = msgArg or arg1
 		local spellName = unitArg or arg2
-		if not hasThreatAPI and castUnit == "player" and spellName == "Disengage" and playerDamage > 0 then
+		-- Раньше здесь стояло условие "playerDamage > 0", но т.к. счётчик
+		-- регулярно случайно обнулялся из-за бага с трекингом цели (см.
+		-- выше), Disengage выглядел "срабатывающим только 1 раз". Теперь
+		-- применяем снижение безусловно (на 0 умножение безвредно) и
+		-- всегда печатаем подтверждение, чтобы было видно, что каждое
+		-- нажатие реально обработано.
+		if not hasThreatAPI and castUnit == "player" and spellName == "Disengage" then
 			playerDamage = playerDamage * 0.8
 			UpdateMeter()
 			print("|cff33ff99Hunter Aggro Meter|r: Disengage - aggro reduced by 20%.")
