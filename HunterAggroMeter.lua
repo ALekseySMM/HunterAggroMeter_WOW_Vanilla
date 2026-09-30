@@ -35,7 +35,7 @@ local ADDON_NAME = "HunterAggroMeter"
 -- оба значения при каждом релизе. GetAddOnMetadata на этом клиенте
 -- ненадёжен, поэтому номер версии просто продублирован тут как
 -- константа для отображения в окне.
-local ADDON_VERSION = "1.28"
+local ADDON_VERSION = "1.29"
 
 HunterAggroMeterDB = HunterAggroMeterDB or {
 	point = "CENTER",
@@ -636,6 +636,12 @@ local playerDamage, petDamage = 0, 0
 local trackedTargetName = nil
 local lastComputedValue = 0
 
+-- Коэффициент "хил -> угроза", общий и для HP-трекинга Mend Pet
+-- (ниже), и для старого текстового пути. Раньше был 0.5 (как в
+-- реальной игре, где хил создаёт примерно половину угрозы от
+-- нанесённого урона); по просьбе — сейчас 1:1.
+local HEAL_THREAT_MULTIPLIER = 1.0
+
 local function ResetDamageTracking(trackedUnit)
 	playerDamage, petDamage = 0, 0
 	trackedTargetName = trackedUnit and UnitName(trackedUnit) or nil
@@ -699,7 +705,7 @@ end
 -- Вызывается при любом первом действии игрока (выстрел/каст/хил
 -- пета) во время активного FD-таймера. rawAmount — величина этого
 -- конкретного действия в тех же единицах, что и playerDamage/petDamage
--- (для хила это уже amount*0.5, коэффициент угрозы от хила).
+-- (для хила это уже amount*HEAL_THREAT_MULTIPLIER).
 local function ResolveFeignDeathAction(rawAmount)
 	if not fdActive then return end
 
@@ -807,9 +813,9 @@ local function ExtractHealAmount(msg)
 	return amount and tonumber(amount) or nil
 end
 
--- Хил пета тоже создаёт угрозу — считаем 50% от объёма хила как
--- "урон" в общем зачёте игрока, иначе можно случайно переагрить
--- моба чистым хилом, не нанося урона вообще.
+-- Хил пета тоже создаёт угрозу — прибавляем объём хила (умноженный на
+-- HEAL_THREAT_MULTIPLIER) к "урону" в общем зачёте игрока, иначе можно
+-- случайно переагрить моба чистым хилом, не нанося урона вообще.
 local function HandleHealChatMsg(msg)
 	DebugPrint("heal", msg)
 	if not trackedTargetName or not msg then return end
@@ -820,7 +826,7 @@ local function HandleHealChatMsg(msg)
 	local amount = ExtractHealAmount(msg)
 	if not amount then return end
 
-	local threatEquivalent = amount * 0.5
+	local threatEquivalent = amount * HEAL_THREAT_MULTIPLIER
 	if fdActive then
 		ResolveFeignDeathAction(threatEquivalent)
 	else
@@ -829,11 +835,11 @@ local function HandleHealChatMsg(msg)
 end
 
 ----------------------------------------------------------------
--- Хил пета через отслеживание HP (надёжнее текста лога): на этом
--- сервере ни одно из событий CHAT_MSG_SPELL_*_HEAL не приходит вообще
--- для тиков Mend Pet (проверено через /ham debug), поэтому вместо
--- парсинга текста просто следим за ростом HP пета, пока на нём висит
--- баф "Mend Pet" — не зависит от формата текста конкретного сервера.
+-- Хил пета через отслеживание HP (надёжнее текста лога и бафов): на
+-- этом сервере ни одно из событий CHAT_MSG_SPELL_*_HEAL не приходит
+-- вообще для тиков Mend Pet, и сам баф "Mend Pet" не отображается
+-- через UnitBuff (оба варианта проверены через /ham debug). Поэтому
+-- просто считаем хилом любой рост HP пета во время боя.
 ----------------------------------------------------------------
 
 local petHealthKnown = false
@@ -844,25 +850,12 @@ local function ResetPetHealthTracking()
 	petLastHealth = 0
 end
 
--- Сравниваем через string.find, а не "==", на случай если на этом
--- сервере имя бафа идёт с рангом/припиской ("Mend Pet Rank 2" и т.п.)
-local function HasMendPetBuff()
-	local i = 1
-	while true do
-		local name = UnitBuff("pet", i)
-		if not name then break end
-		if string.find(name, "Mend Pet", 1, true) then
-			return true
-		end
-		i = i + 1
-	end
-	return false
-end
-
--- Раз в секунду печатаем сырое состояние (HP пета + найден ли баф),
--- когда включён /ham debug — чтобы понять, на чём именно ломается:
--- баф не находится, или HP не растёт, или функция вообще не
--- вызывается.
+-- На этом сервере баф "Mend Pet" никогда не отображается через
+-- UnitBuff (проверено через /ham debug — mendPetBuff=false все время,
+-- хотя HP пета явно растёт во время боя). Раз баф не отследить,
+-- привязка к нему только мешает — вместо этого считаем хилом любой
+-- рост HP пета во время боя: соло хантеру взяться неоткуда, кроме
+-- Mend Pet (пет сам себя не лечит и не регенерирует посреди драки).
 local petHealDebugAccum = 0
 
 local function CheckPetHealTick(dt)
@@ -882,14 +875,14 @@ local function CheckPetHealTick(dt)
 		petHealDebugAccum = petHealDebugAccum + (dt or 0)
 		if petHealDebugAccum >= 1 then
 			petHealDebugAccum = petHealDebugAccum - 1
-			DebugPrint("pet-hp", "HP=" .. tostring(curHealth) .. " lastHP=" .. tostring(petLastHealth) .. " mendPetBuff=" .. tostring(HasMendPetBuff()))
+			DebugPrint("pet-hp", "HP=" .. tostring(curHealth) .. " lastHP=" .. tostring(petLastHealth))
 		end
 	end
 
-	if HasMendPetBuff() and curHealth > petLastHealth then
+	if curHealth > petLastHealth then
 		local healedAmount = curHealth - petLastHealth
-		local threatEquivalent = healedAmount * 0.5
-		DebugPrint("heal-tick", "Mend Pet healed pet for " .. healedAmount .. " (threat +" .. threatEquivalent .. ")")
+		local threatEquivalent = healedAmount * HEAL_THREAT_MULTIPLIER
+		DebugPrint("heal-tick", "pet HP went up by " .. healedAmount .. " (threat +" .. threatEquivalent .. ")")
 		if fdActive then
 			ResolveFeignDeathAction(threatEquivalent)
 		else

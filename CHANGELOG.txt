@@ -273,6 +273,18 @@ Version 1.28 - Diagnostics for the still-not-working Mend Pet threat
     pet by exact name plus its HP - run this right after casting Mend
     Pet to see precisely what name the buff has on this server.
 
+Version 1.29 - Mend Pet threat: drop the buff requirement, 1:1 coefficient
+------------------------------------------------------------------------
+- Debug logs confirmed the pet's HP clearly rises during Mend Pet
+  (visible tick-by-tick in /ham debug), but the "Mend Pet" buff itself
+  never shows up via UnitBuff on this server (mendPetBuff was false on
+  every single check). The buff check was the actual blocker - it's
+  now removed. Any rise in the pet's HP during a fight is counted as
+  a heal (nothing else would increase a solo hunter's pet HP mid-fight).
+- Heal-to-threat coefficient changed from 0.5 to 1:1
+  (HEAL_THREAT_MULTIPLIER), applies to both the HP-tracking path above
+  and the old chat-text path.
+
 ----------------------------------------
 
 Summary: almost every version after 1.01 isn't a new feature so much as
