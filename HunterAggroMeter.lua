@@ -817,6 +817,62 @@ local function HandleHealChatMsg(msg)
 	end
 end
 
+----------------------------------------------------------------
+-- Хил пета через отслеживание HP (надёжнее текста лога): на этом
+-- сервере ни одно из событий CHAT_MSG_SPELL_*_HEAL не приходит вообще
+-- для тиков Mend Pet (проверено через /ham debug), поэтому вместо
+-- парсинга текста просто следим за ростом HP пета, пока на нём висит
+-- баф "Mend Pet" — не зависит от формата текста конкретного сервера.
+----------------------------------------------------------------
+
+local petHealthKnown = false
+local petLastHealth = 0
+
+local function ResetPetHealthTracking()
+	petHealthKnown = false
+	petLastHealth = 0
+end
+
+local function HasMendPetBuff()
+	local i = 1
+	while true do
+		local name = UnitBuff("pet", i)
+		if not name then break end
+		if name == "Mend Pet" then
+			return true
+		end
+		i = i + 1
+	end
+	return false
+end
+
+local function CheckPetHealTick()
+	if not UnitExists("pet") then
+		ResetPetHealthTracking()
+		return
+	end
+
+	local curHealth = UnitHealth("pet")
+	if not petHealthKnown then
+		petLastHealth = curHealth
+		petHealthKnown = true
+		return
+	end
+
+	if HasMendPetBuff() and curHealth > petLastHealth then
+		local healedAmount = curHealth - petLastHealth
+		local threatEquivalent = healedAmount * 0.5
+		DebugPrint("heal-tick", "Mend Pet healed pet for " .. healedAmount .. " (threat +" .. threatEquivalent .. ")")
+		if fdActive then
+			ResolveFeignDeathAction(threatEquivalent)
+		else
+			playerDamage = playerDamage + threatEquivalent
+		end
+	end
+
+	petLastHealth = curHealth
+end
+
 local function UpdateApproxMeter()
 	local trackedUnit = GetTrackedUnit()
 	if IsPlayerDead() or not trackedUnit then
@@ -976,6 +1032,12 @@ events:SetScript("OnEvent", function(selfArg, evArg, msgArg, unitArg)
 		return
 	end
 
+	if ev == "UNIT_PET" then
+		ResetPetHealthTracking()
+		UpdateMeter()
+		return
+	end
+
 	if ev == "PLAYER_ENTERING_WORLD" then
 		ApplySavedSettings()
 		UpdateMeter()
@@ -1022,6 +1084,7 @@ frame:SetScript("OnUpdate", function(selfArg, elapsedArg)
 
 	if not hasThreatAPI then
 		CheckFeignDeathState(dt)
+		CheckPetHealTick()
 	end
 
 	elapsedSum = elapsedSum + dt

@@ -233,6 +233,18 @@ Version 1.25 - Track the pet's target, not just the player's; Disengage
   by 20% (approx mode only - in precise/real-threat mode the server's
   own threat value can't be faked).
 
+Version 1.26 - Mend Pet threat via HP tracking instead of chat text
+------------------------------------------------------------------------
+- Confirmed via /ham debug on the actual server: none of the
+  CHAT_MSG_SPELL_*_HEAL events ever fire for Mend Pet ticks here, so
+  the text-parsing approach from 1.23-1.25 could never have worked on
+  this server.
+- Replaced it with direct HP tracking: every frame, if the pet has the
+  "Mend Pet" buff and its health went up since the last check, that
+  increase is counted as a heal (50% of it added to the player's
+  threat side), regardless of what (if anything) the server prints to
+  chat about it.
+
 ----------------------------------------
 
 Summary: almost every version after 1.01 isn't a new feature so much as
