@@ -35,7 +35,7 @@ local ADDON_NAME = "HunterAggroMeter"
 -- оба значения при каждом релизе. GetAddOnMetadata на этом клиенте
 -- ненадёжен, поэтому номер версии просто продублирован тут как
 -- константа для отображения в окне.
-local ADDON_VERSION = "1.27"
+local ADDON_VERSION = "1.28"
 
 HunterAggroMeterDB = HunterAggroMeterDB or {
 	point = "CENTER",
@@ -844,12 +844,14 @@ local function ResetPetHealthTracking()
 	petLastHealth = 0
 end
 
+-- Сравниваем через string.find, а не "==", на случай если на этом
+-- сервере имя бафа идёт с рангом/припиской ("Mend Pet Rank 2" и т.п.)
 local function HasMendPetBuff()
 	local i = 1
 	while true do
 		local name = UnitBuff("pet", i)
 		if not name then break end
-		if name == "Mend Pet" then
+		if string.find(name, "Mend Pet", 1, true) then
 			return true
 		end
 		i = i + 1
@@ -857,7 +859,13 @@ local function HasMendPetBuff()
 	return false
 end
 
-local function CheckPetHealTick()
+-- Раз в секунду печатаем сырое состояние (HP пета + найден ли баф),
+-- когда включён /ham debug — чтобы понять, на чём именно ломается:
+-- баф не находится, или HP не растёт, или функция вообще не
+-- вызывается.
+local petHealDebugAccum = 0
+
+local function CheckPetHealTick(dt)
 	if not UnitExists("pet") then
 		ResetPetHealthTracking()
 		return
@@ -868,6 +876,14 @@ local function CheckPetHealTick()
 		petLastHealth = curHealth
 		petHealthKnown = true
 		return
+	end
+
+	if HunterAggroMeterDB.debug then
+		petHealDebugAccum = petHealDebugAccum + (dt or 0)
+		if petHealDebugAccum >= 1 then
+			petHealDebugAccum = petHealDebugAccum - 1
+			DebugPrint("pet-hp", "HP=" .. tostring(curHealth) .. " lastHP=" .. tostring(petLastHealth) .. " mendPetBuff=" .. tostring(HasMendPetBuff()))
+		end
 	end
 
 	if HasMendPetBuff() and curHealth > petLastHealth then
@@ -1095,7 +1111,7 @@ frame:SetScript("OnUpdate", function(selfArg, elapsedArg)
 
 	if not hasThreatAPI then
 		CheckFeignDeathState(dt)
-		CheckPetHealTick()
+		CheckPetHealTick(dt)
 	end
 
 	elapsedSum = elapsedSum + dt
@@ -1124,6 +1140,25 @@ SlashCmdList["HUNTERAGGROMETER"] = function(msg)
 	elseif msg == "debug" then
 		HunterAggroMeterDB.debug = not HunterAggroMeterDB.debug
 		print("|cff33ff99Hunter Aggro Meter|r: debug " .. (HunterAggroMeterDB.debug and "on (raw combat/heal log text will be printed)" or "off") .. ".")
+	elseif msg == "petbuffs" then
+		if not UnitExists("pet") then
+			print("|cff33ff99Hunter Aggro Meter|r: no pet.")
+		else
+			print("|cff33ff99Hunter Aggro Meter|r: current pet buffs:")
+			local i = 1
+			local found = false
+			while true do
+				local name = UnitBuff("pet", i)
+				if not name then break end
+				print("  " .. i .. ". " .. tostring(name))
+				found = true
+				i = i + 1
+			end
+			if not found then
+				print("  (none)")
+			end
+			print("|cff33ff99Hunter Aggro Meter|r: pet HP = " .. tostring(UnitHealth("pet")))
+		end
 	elseif msg == "reset" then
 		HunterAggroMeterDB.point = "CENTER"
 		HunterAggroMeterDB.relPoint = "CENTER"
@@ -1161,5 +1196,6 @@ SlashCmdList["HUNTERAGGROMETER"] = function(msg)
 		print("  /ham t <number> - set aggro threshold %, e.g. /ham t 180")
 		print("  /ham doc       - show Rules - read me !")
 		print("  /ham debug     - toggle printing raw combat/heal log text (for troubleshooting)")
+		print("  /ham petbuffs  - list current pet buffs and HP (for troubleshooting)")
 	end
 end

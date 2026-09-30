@@ -257,6 +257,22 @@ Version 1.27 - Version label in the window
   version label is the practical substitute - compare it by eye
   against the version on the GitHub repo page.
 
+Version 1.28 - Diagnostics for the still-not-working Mend Pet threat
+------------------------------------------------------------------------
+- HP-based Mend Pet tracking from 1.26 was reported as still not
+  showing any aggro increase in-game. Added diagnostics to find out
+  exactly where it breaks:
+  - Buff name check is now a substring match ("Mend Pet" anywhere in
+    the name) instead of exact equality, in case this server appends
+    a rank or other suffix.
+  - While /ham debug is on, prints the pet's HP and whether the
+    "Mend Pet" buff was detected once per second, so it's possible to
+    see whether the buff is being found at all and whether HP is
+    actually increasing.
+  - Added /ham petbuffs: on demand, lists every buff currently on the
+    pet by exact name plus its HP - run this right after casting Mend
+    Pet to see precisely what name the buff has on this server.
+
 ----------------------------------------
 
 Summary: almost every version after 1.01 isn't a new feature so much as
