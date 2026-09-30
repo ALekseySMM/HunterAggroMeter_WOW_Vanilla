@@ -306,6 +306,23 @@ Version 1.30 - Fixed spurious full resets (Disengage / Esc / target blips)
   (that gate was itself getting tripped by the same false-reset bug) -
   it now always applies and always prints a confirmation.
 
+Version 1.31 - Disengage diagnostics + before/after aggro readout
+------------------------------------------------------------------------
+- Disengage was reported as not working at all even after the 1.30
+  reset-bug fix. Added diagnostics to isolate why:
+  - While /ham debug is on, every successful spell cast now prints
+    "[spellcast] unit=... spell=..." - if UNIT_SPELLCAST_SUCCEEDED
+    never fires on this server (or never fires for an instant ability
+    like Disengage), this will show nothing at all for it, which
+    would mean a different detection method is needed.
+  - Spell name match is now case-insensitive and substring-based
+    ("disengage" anywhere in the name) instead of an exact
+    "Disengage" match, in case this server sends a different casing
+    or adds text.
+  - When Disengage IS detected, the chat message now reports the
+    actual before/after aggro percentage, e.g. "aggro was 190%, now
+    152% (-20%)", instead of a generic confirmation.
+
 ----------------------------------------
 
 Summary: almost every version after 1.01 isn't a new feature so much as
