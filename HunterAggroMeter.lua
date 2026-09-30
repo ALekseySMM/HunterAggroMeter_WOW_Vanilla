@@ -35,7 +35,7 @@ local ADDON_NAME = "HunterAggroMeter"
 -- оба значения при каждом релизе. GetAddOnMetadata на этом клиенте
 -- ненадёжен, поэтому номер версии просто продублирован тут как
 -- константа для отображения в окне.
-local ADDON_VERSION = "1.31"
+local ADDON_VERSION = "1.32"
 
 HunterAggroMeterDB = HunterAggroMeterDB or {
 	point = "CENTER",
@@ -647,6 +647,27 @@ local function ResetDamageTracking(trackedUnit)
 	trackedTargetName = trackedUnit and UnitName(trackedUnit) or nil
 end
 
+-- "Наш урон в % от урона пета" — тот же расчёт, что использует
+-- UpdateApproxMeter для полосы, вынесен отдельно, чтобы им же можно
+-- было посчитать "было/стало" для сообщения об эффекте Disengage.
+local function ComputeApproxAggroValue()
+	if petDamage <= 0 then
+		return playerDamage > 0 and 100 or 0
+	end
+	return (playerDamage / petDamage) * 100
+end
+
+-- Disengage: снижаем агро на 20%. UNIT_SPELLCAST_SUCCEEDED на этом
+-- сервере не срабатывает вообще (проверено через /ham debug), зато
+-- каст Disengage приходит обычным combat-чат сообщением ("You cast
+-- Disengage on <моб>.") — детектим его текстом, см. HandleCombatChatMsg.
+local function ApplyDisengageAggroDrop()
+	local before = ComputeApproxAggroValue()
+	playerDamage = playerDamage * 0.8
+	local after = ComputeApproxAggroValue()
+	print(string.format("|cff33ff99Hunter Aggro Meter|r: Disengage - aggro was %d%%, now %d%% (-20%%).", math.floor(before), math.floor(after)))
+end
+
 ----------------------------------------------------------------
 -- Feign Death: сброс агро с восстановлением по таймеру
 ----------------------------------------------------------------
@@ -785,6 +806,14 @@ end
 -- парсингом текста, это надёжнее.
 local function HandleCombatChatMsg(source, msg)
 	DebugPrint("combat:" .. tostring(source), msg)
+
+	-- Disengage тоже приходит через этот канал ("You cast Disengage on
+	-- <моб>.") — не завязываемся на trackedTargetName, чтобы сработало,
+	-- даже если цель в этот момент временно потеряна.
+	if source == "player" and msg and string.find(string.lower(msg), "disengage", 1, true) then
+		ApplyDisengageAggroDrop()
+	end
+
 	if not trackedTargetName or not msg then return end
 	if not string.find(msg, trackedTargetName, 1, true) then return end
 
@@ -891,16 +920,6 @@ local function CheckPetHealTick(dt)
 	end
 
 	petLastHealth = curHealth
-end
-
--- Тот же расчёт "наш урон в % от урона пета", что и в UpdateApproxMeter
--- ниже — вынесен отдельно, чтобы им же можно было посчитать "было/стало"
--- для сообщения об эффекте Disengage.
-local function ComputeApproxAggroValue()
-	if petDamage <= 0 then
-		return playerDamage > 0 and 100 or 0
-	end
-	return (playerDamage / petDamage) * 100
 end
 
 local function UpdateApproxMeter()
@@ -1010,10 +1029,6 @@ else
 	for _, evName in ipairs(HEAL_CHAT_EVENTS) do
 		events:RegisterEvent(evName)
 	end
-	-- Для отслеживания Disengage (сброс 20% агро). Не факт, что это
-	-- событие вообще существует на этом клиенте — оборачиваем в pcall,
-	-- чтобы неизвестное имя события не уронило загрузку всего аддона.
-	pcall(function() events:RegisterEvent("UNIT_SPELLCAST_SUCCEEDED") end)
 end
 
 local function UpdateMeter()
@@ -1115,30 +1130,6 @@ events:SetScript("OnEvent", function(selfArg, evArg, msgArg, unitArg)
 	if HEAL_CHAT_EVENTS_SET[ev] then
 		local msg = msgArg or arg1
 		HandleHealChatMsg(msg)
-		return
-	end
-
-	if ev == "UNIT_SPELLCAST_SUCCEEDED" then
-		local castUnit = msgArg or arg1
-		local spellName = unitArg or arg2
-		if not hasThreatAPI then
-			-- Печатаем КАЖДЫЙ успешный каст (не только Disengage), пока
-			-- включён /ham debug — если событие вообще не приходит на
-			-- Disengage, тут будет видно, приходит ли оно хоть на что-то,
-			-- и как именно сервер называет сам спелл.
-			DebugPrint("spellcast", "unit=" .. tostring(castUnit) .. " spell=" .. tostring(spellName))
-
-			-- Сравниваем без учёта регистра и как подстроку — на случай,
-			-- если сервер шлёт что-то вроде "disengage" или добавляет ранг.
-			local isDisengage = castUnit == "player" and spellName and string.find(string.lower(spellName), "disengage", 1, true)
-			if isDisengage then
-				local before = ComputeApproxAggroValue()
-				playerDamage = playerDamage * 0.8
-				local after = ComputeApproxAggroValue()
-				UpdateMeter()
-				print(string.format("|cff33ff99Hunter Aggro Meter|r: Disengage - aggro was %d%%, now %d%% (-20%%).", math.floor(before), math.floor(after)))
-			end
-		end
 		return
 	end
 
