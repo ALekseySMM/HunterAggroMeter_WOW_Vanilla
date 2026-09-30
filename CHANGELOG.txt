@@ -217,6 +217,22 @@ Version 1.24 - Close button restyle + fix aggro not clearing on death
   resets to zero immediately once the player is dead, in both the
   precise and approximate modes.
 
+Version 1.25 - Track the pet's target, not just the player's; Disengage
+------------------------------------------------------------------------
+- Fixed: if the player didn't personally target the mob (e.g. just
+  healing the pet with Mend Pet from range while the pet fights),
+  aggro tracking silently reset to "no target" and ignored all damage
+  and healing. The meter now tracks whatever the pet is fighting
+  (pettarget) first, falling back to the player's own target only if
+  the pet has none.
+- Added /ham debug: toggles printing the raw combat-log text for
+  damage/heal events, to help verify the exact wording this server
+  sends (useful if Mend Pet threat still doesn't register - the text
+  pattern may need adjusting for this server).
+- Added: using Disengage now reduces the approximate-mode aggro value
+  by 20% (approx mode only - in precise/real-threat mode the server's
+  own threat value can't be faked).
+
 ----------------------------------------
 
 Summary: almost every version after 1.01 isn't a new feature so much as

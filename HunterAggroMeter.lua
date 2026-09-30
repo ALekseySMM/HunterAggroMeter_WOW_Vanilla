@@ -46,6 +46,7 @@ HunterAggroMeterDB = HunterAggroMeterDB or {
 	btnX = 0,
 	btnY = 120,
 	btnLayoutVersion = 3,
+	debug = false,
 }
 
 -- Если у игрока сохранена позиция кнопки от старой версии аддона
@@ -571,21 +572,39 @@ local function IsPlayerDead()
 	return UnitIsDead("player")
 end
 
+-- Какого моба реально считаем "боем" для расчёта агро. Раньше везде
+-- бралась только цель ИГРОКА ("target") — из-за этого, если хантер
+-- сам никого не таргетил (просто хилил пета издалека, пока пет уже
+-- дерётся с новым мобом), трекинг решал, что боя нет, и весь урон/хил
+-- игнорировался. Теперь сначала смотрим цель ПЕТА (pettarget) — это
+-- и есть тот моб, с которым реально идёт бой, и только если у пета
+-- нет цели, откатываемся на собственную цель игрока.
+local function GetTrackedUnit()
+	if UnitExists("pettarget") and UnitCanAttack("player", "pettarget") and not UnitIsDead("pettarget") then
+		return "pettarget"
+	end
+	if UnitExists("target") and UnitCanAttack("player", "target") and not UnitIsDead("target") then
+		return "target"
+	end
+	return nil
+end
+
 ----------------------------------------------------------------
 -- РЕЖИМ 1: точный, через UnitDetailedThreatSituation
 ----------------------------------------------------------------
 
 local function UpdatePreciseMeter()
-	if IsPlayerDead() or not UnitExists("target") or not UnitCanAttack("player", "target") or UnitIsDead("target") then
+	local trackedUnit = GetTrackedUnit()
+	if IsPlayerDead() or not trackedUnit then
 		ResetMeter()
 		return
 	end
 
-	local isTankingP, statusP, _, rawP = UnitDetailedThreatSituation("player", "target")
+	local isTankingP, statusP, _, rawP = UnitDetailedThreatSituation("player", trackedUnit)
 	local hasPet = UnitExists("pet")
 	local isTankingPet, statusPet, scaledPet
 	if hasPet then
-		isTankingPet, statusPet, scaledPet = UnitDetailedThreatSituation("pet", "target")
+		isTankingPet, statusPet, scaledPet = UnitDetailedThreatSituation("pet", trackedUnit)
 	end
 
 	local value = rawP or 0
@@ -606,9 +625,9 @@ local playerDamage, petDamage = 0, 0
 local trackedTargetName = nil
 local lastComputedValue = 0
 
-local function ResetDamageTracking()
+local function ResetDamageTracking(trackedUnit)
 	playerDamage, petDamage = 0, 0
-	trackedTargetName = UnitExists("target") and UnitName("target") or nil
+	trackedTargetName = trackedUnit and UnitName(trackedUnit) or nil
 end
 
 ----------------------------------------------------------------
@@ -733,10 +752,22 @@ local function ExtractDamageAmount(msg)
 	return amount and tonumber(amount) or nil
 end
 
+-- Отладочный вывод сырых combat-log сообщений — включается командой
+-- /ham debug. Нужен, чтобы при следующей проверке в игре можно было
+-- увидеть точный текст, который присылает конкретно этот сервер (для
+-- урона и особенно для хила Mend Pet — формат текста мог отличаться
+-- от того, что "по умолчанию" ожидает ExtractHealAmount).
+local function DebugPrint(label, msg)
+	if HunterAggroMeterDB.debug then
+		print("|cff33ff99HAM debug|r [" .. label .. "] " .. tostring(msg))
+	end
+end
+
 -- source: "player" или "pet" — определяется тем, из какого именно
 -- события пришло сообщение (см. регистрацию событий ниже), а не
 -- парсингом текста, это надёжнее.
 local function HandleCombatChatMsg(source, msg)
+	DebugPrint("combat:" .. tostring(source), msg)
 	if not trackedTargetName or not msg then return end
 	if not string.find(msg, trackedTargetName, 1, true) then return end
 
@@ -769,6 +800,7 @@ end
 -- "урон" в общем зачёте игрока, иначе можно случайно переагрить
 -- моба чистым хилом, не нанося урона вообще.
 local function HandleHealChatMsg(msg)
+	DebugPrint("heal", msg)
 	if not trackedTargetName or not msg then return end
 	local petName = UnitExists("pet") and UnitName("pet") or nil
 	if not petName then return end
@@ -786,16 +818,17 @@ local function HandleHealChatMsg(msg)
 end
 
 local function UpdateApproxMeter()
-	if IsPlayerDead() or not UnitExists("target") or not UnitCanAttack("player", "target") or UnitIsDead("target") then
+	local trackedUnit = GetTrackedUnit()
+	if IsPlayerDead() or not trackedUnit then
 		ResetMeter()
 		trackedTargetName = nil
 		StopFeignDeath()
 		return
 	end
 
-	local curName = UnitName("target")
+	local curName = UnitName(trackedUnit)
 	if curName ~= trackedTargetName then
-		ResetDamageTracking()
+		ResetDamageTracking(trackedUnit)
 		StopFeignDeath()
 	end
 
@@ -875,6 +908,10 @@ else
 	for _, evName in ipairs(HEAL_CHAT_EVENTS) do
 		events:RegisterEvent(evName)
 	end
+	-- Для отслеживания Disengage (сброс 20% агро). Не факт, что это
+	-- событие вообще существует на этом клиенте — оборачиваем в pcall,
+	-- чтобы неизвестное имя события не уронило загрузку всего аддона.
+	pcall(function() events:RegisterEvent("UNIT_SPELLCAST_SUCCEEDED") end)
 end
 
 local function UpdateMeter()
@@ -933,7 +970,7 @@ events:SetScript("OnEvent", function(selfArg, evArg, msgArg, unitArg)
 
 	if ev == "PLAYER_TARGET_CHANGED" then
 		if not hasThreatAPI then
-			ResetDamageTracking()
+			ResetDamageTracking(GetTrackedUnit())
 		end
 		UpdateMeter()
 		return
@@ -955,6 +992,17 @@ events:SetScript("OnEvent", function(selfArg, evArg, msgArg, unitArg)
 	if HEAL_CHAT_EVENTS_SET[ev] then
 		local msg = msgArg or arg1
 		HandleHealChatMsg(msg)
+		return
+	end
+
+	if ev == "UNIT_SPELLCAST_SUCCEEDED" then
+		local castUnit = msgArg or arg1
+		local spellName = unitArg or arg2
+		if not hasThreatAPI and castUnit == "player" and spellName == "Disengage" and playerDamage > 0 then
+			playerDamage = playerDamage * 0.8
+			UpdateMeter()
+			print("|cff33ff99Hunter Aggro Meter|r: Disengage - aggro reduced by 20%.")
+		end
 		return
 	end
 
@@ -999,6 +1047,9 @@ SlashCmdList["HUNTERAGGROMETER"] = function(msg)
 	elseif msg == "sound" then
 		HunterAggroMeterDB.sound = not HunterAggroMeterDB.sound
 		print("|cff33ff99Hunter Aggro Meter|r: sound " .. (HunterAggroMeterDB.sound and "on" or "off") .. ".")
+	elseif msg == "debug" then
+		HunterAggroMeterDB.debug = not HunterAggroMeterDB.debug
+		print("|cff33ff99Hunter Aggro Meter|r: debug " .. (HunterAggroMeterDB.debug and "on (raw combat/heal log text will be printed)" or "off") .. ".")
 	elseif msg == "reset" then
 		HunterAggroMeterDB.point = "CENTER"
 		HunterAggroMeterDB.relPoint = "CENTER"
@@ -1035,5 +1086,6 @@ SlashCmdList["HUNTERAGGROMETER"] = function(msg)
 		print("  /ham reset     - reset window position")
 		print("  /ham t <number> - set aggro threshold %, e.g. /ham t 180")
 		print("  /ham doc       - show Rules - read me !")
+		print("  /ham debug     - toggle printing raw combat/heal log text (for troubleshooting)")
 	end
 end
