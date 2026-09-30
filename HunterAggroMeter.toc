@@ -2,7 +2,7 @@
 ## Title: Hunter Aggro Meter (Solo)
 ## Notes: Shows how close you are to pulling aggro off your pet while solo farming as a Hunter.
 ## Author: Sherai
-## Version: 1.26
+## Version: 1.27
 ## X-Website: https://github.com/ALekseySMM/HunterAggroMeter_WOW_Vanilla
 ## SavedVariables: HunterAggroMeterDB
 

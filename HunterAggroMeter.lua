@@ -31,6 +31,11 @@
 ]]
 
 local ADDON_NAME = "HunterAggroMeter"
+-- Держим в связке с "## Version:" в HunterAggroMeter.toc — обновлять
+-- оба значения при каждом релизе. GetAddOnMetadata на этом клиенте
+-- ненадёжен, поэтому номер версии просто продублирован тут как
+-- константа для отображения в окне.
+local ADDON_VERSION = "1.27"
 
 HunterAggroMeterDB = HunterAggroMeterDB or {
 	point = "CENTER",
@@ -83,7 +88,7 @@ end
 ----------------------------------------------------------------
 
 local frame = CreateFrame("Frame", "HunterAggroMeterFrame", UIParent)
-frame:SetWidth(230); frame:SetHeight(102)
+frame:SetWidth(230); frame:SetHeight(116)
 frame:SetPoint(HunterAggroMeterDB.point, UIParent, HunterAggroMeterDB.relPoint, HunterAggroMeterDB.x, HunterAggroMeterDB.y)
 frame:SetMovable(true)
 frame:EnableMouse(true)
@@ -226,6 +231,12 @@ petText:SetText("--")
 local statusLine = frame:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
 statusLine:SetPoint("TOP", petBar, "BOTTOM", 0, -5)
 statusLine:SetText("Tank: --")
+
+-- Номер версии в правом нижнем углу — тот же стиль шрифта, что у
+-- "Pet damage (reference)".
+local versionLabel = frame:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+versionLabel:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -4, 4)
+versionLabel:SetText("ver. " .. ADDON_VERSION)
 
 ----------------------------------------------------------------
 -- Постоянная кнопка-переключатель (видна всегда, даже если окно

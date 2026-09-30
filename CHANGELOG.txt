@@ -245,6 +245,18 @@ Version 1.26 - Mend Pet threat via HP tracking instead of chat text
   threat side), regardless of what (if anything) the server prints to
   chat about it.
 
+Version 1.27 - Version label in the window
+------------------------------------------------------------------------
+- Added a "ver. X.XX" label in the bottom-right corner of the main
+  window (same font style as "Pet damage (reference)"), showing the
+  currently installed addon version. Slightly increased window height
+  so it doesn't overlap the status line.
+- Automatic update-checking against GitHub was requested but isn't
+  possible: the WoW addon Lua API has no networking functions in any
+  version, so an addon can never reach out to GitHub on its own. This
+  version label is the practical substitute - compare it by eye
+  against the version on the GitHub repo page.
+
 ----------------------------------------
 
 Summary: almost every version after 1.01 isn't a new feature so much as
